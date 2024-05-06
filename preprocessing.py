@@ -3,6 +3,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import nltk
 import inflect
+from graphviz import Digraph
 
 tokenizer = AutoTokenizer.from_pretrained("./NL2ERD")
 model = AutoModelForSeq2SeqLM.from_pretrained("./NL2ERD")
@@ -88,32 +89,29 @@ def process_relation(paragraph):
             # Convert 'head' to lowercase and singular form before appending
             singular_head = p.singular_noun(value['head'].lower())
             value['head'] = singular_head if singular_head else value['head'].lower()
-            final_relation.append(value)
+            if value not in final_relation:
+                final_relation.append(value)
     return final_relation
 
 def generate_erd(final_relation):
-    G = nx.DiGraph()
+    # Create a new Digraph
+    dot = Digraph()
 
-    for triplet in final_relation:
-        G.add_edge(triplet['head'], triplet['tail'], label=triplet['type'])
+    # Extract unique entities
+    entities = set()
+    for item in final_relation:
+        entities.add(item['head'])
+        entities.add(item['tail'])
 
-    pos = nx.spring_layout(G)
+    # Add entities and attributes to the graph
+    for entity in entities:
+        dot.node(entity)
 
-    node_sizes = {}
-    node_colors = {}
-    for triplet in final_relation:
-        if triplet['type'] == 'relation with':
-            node_sizes[triplet['head']] = 2000  # Set node size to 2000 for 'relation with' type
-            node_sizes[triplet['tail']] = 2000
-            node_colors[triplet['head']] = 'red'  # Set node color to red for 'relation with' type
-            node_colors[triplet['tail']] = 'red'
-        else:
-            node_sizes[triplet['head']] = 2000  # Set node size to 1000 for 'attribute of' type
-            node_sizes[triplet['tail']] = 1000
-            node_colors[triplet['head']] = 'red'  # Set node color to blue for 'attribute of' type
-            node_colors[triplet['tail']] = 'cyan'
-    
-    # Update the draw function to use straight lines instead of arrows
-    nx.draw(G, pos, with_labels=True, font_weight='bold', node_size=list(node_sizes.values()), font_size=5, node_color=list(node_colors.values()), connectionstyle='arc3,rad=0')
+    for item in final_relation:
+        dot.edge(item['head'], item['tail'])
 
-    plt.savefig('./static/picture/erd.png')  # Save the ERD as an image file
+    # Set Graph attributes
+    dot.attr(rankdir='LR')
+
+    output_path = './static/picture/erd'
+    dot.render(output_path, format='png', cleanup=True)
