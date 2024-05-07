@@ -104,8 +104,14 @@ def generate_erd(final_relation):
         entities.add(item['tail'])
 
     # Add entities and attributes to the graph
-    for entity in entities:
-        dot.node(entity)
+    node_colors = {}  # Dictionary to store node colors
+    for item in final_relation:
+        if item['type'] == 'relation with':
+            dot.node(item['head'], color=node_colors.get(item['head'], 'red'))  # Set node color
+            dot.node(item['tail'], color=node_colors.get(item['tail'], 'cyan'))  # Set node color
+        else:    
+            dot.node(item['head'], color=node_colors.get(item['head'], 'red'))  # Set node color
+            dot.node(item['tail'], color=node_colors.get(item['tail'], 'cyan'))  # Set node color
 
     for item in final_relation:
         dot.edge(item['head'], item['tail'])
